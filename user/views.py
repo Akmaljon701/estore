@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from sale.models import Cart
 from .serializers import *
 
 
@@ -18,6 +20,7 @@ def create_custom_user(request):
                             password=serializer.validated_data['password'])
         refresh = RefreshToken.for_user(user)
         serialized_user = CustomUserSerializer(user).data
+        Cart.objects.create(user=user)
         return Response({'detail': 'Created successfully!',
                          'refresh': str(refresh),
                          'access': str(refresh.access_token),

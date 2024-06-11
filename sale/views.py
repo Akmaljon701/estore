@@ -4,8 +4,8 @@ from rest_framework.decorators import api_view, permission_classes, renderer_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
-from sale.models import Category, Product
-from sale.serializers import CategorySerializer, ProductSerializer
+from sale.models import Category, Product, Cart
+from sale.serializers import CategorySerializer, ProductSerializer, CartSerializer, CartGetSerializer, SaleSerializer
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
@@ -28,7 +28,7 @@ def get_categories(request):
 def get_products(request):
     category = request.query_params.get('category')
 
-    products = Product.objects.all()
+    products = Product.objects.filter(count__gte=0).all()
 
     if category:
         products = products.filter(category=category)
@@ -48,4 +48,93 @@ def get_products(request):
 
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data, status=200)
+
+
+@swagger_auto_schema(method='put', request_body=CartSerializer)
+@permission_classes([IsAuthenticated])
+@renderer_classes([JSONRenderer])
+@api_view(['PUT'])
+def user_add_product_to_cart(request):
+    try:
+        cart = Cart.objects.get(user=request.user)
+    except Cart.DoesNotExist:
+        return Response({"detail": "Cart not found."}, status=404)
+
+    serializer = CartSerializer(data=request.data)
+
+    if serializer.is_valid():
+        products = serializer.validated_data['products']
+        for product in products:
+            cart.products.add(product)
+        cart.save()
+        return Response({"detail": "Products added to cart successfully."}, status=200)
+    else:
+        return Response(serializer.errors, status=400)
+
+
+@swagger_auto_schema(method='delete', request_body=CartSerializer)
+@permission_classes([IsAuthenticated])
+@renderer_classes([JSONRenderer])
+@api_view(['DELETE'])
+def user_remove_product_from_cart(request):
+    try:
+        cart = Cart.objects.get(user=request.user)
+    except Cart.DoesNotExist:
+        return Response({"detail": "Cart not found."}, status=404)
+
+    serializer = CartSerializer(data=request.data)
+
+    if serializer.is_valid():
+        products = serializer.validated_data['products']
+        for product in products:
+            cart.products.remove(product)
+        cart.save()
+        return Response({"detail": "Products removed from cart successfully."}, status=200)
+    else:
+        return Response(serializer.errors, status=400)
+
+
+@swagger_auto_schema(method='get')
+@permission_classes([IsAuthenticated])
+@renderer_classes([JSONRenderer])
+@api_view(['GET'])
+def user_get_cart(request):
+    try:
+        cart = Cart.objects.get(user=request.user)
+    except Cart.DoesNotExist:
+        return Response({"detail": "Cart not found."}, status=404)
+
+    for product in cart.products:
+        if product.count <= 0:
+            cart.products.remove(product)
+    cart.save()
+
+    serializer = CartGetSerializer(cart)
+    return Response(serializer.data, status=200)
+
+
+@swagger_auto_schema(method='post', request_body=SaleSerializer)
+@permission_classes([IsAuthenticated])
+@renderer_classes([JSONRenderer])
+@api_view(['POST'])
+def user_sale(request):
+    try:
+        cart = Cart.objects.get(user=request.user)
+    except Cart.DoesNotExist:
+        return Response({"detail": "Cart not found."}, status=404)
+
+    serializer = SaleSerializer(data=request.data)
+
+    if serializer.is_valid():
+        serializer.save(user=request.user)
+        products = serializer.validated_data['products']
+        for product in products:
+            if product.count <= 0:
+                return Response({"detail": "Product count is not sufficient."}, status=400)
+            cart.products.remove(product)
+        cart.save()
+        return Response({"detail": "Sale created and products removed from cart successfully."},
+                        status=201)
+    else:
+        return Response(serializer.errors, status=400)
 
