@@ -104,7 +104,7 @@ def user_get_cart(request):
     except Cart.DoesNotExist:
         return Response({"detail": "Cart not found."}, status=404)
 
-    for product in cart.products:
+    for product in cart.products.all():
         if product.count <= 0:
             cart.products.remove(product)
     cart.save()
