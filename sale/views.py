@@ -51,9 +51,9 @@ def get_products(request):
 
 
 @swagger_auto_schema(method='put', request_body=CartSerializer)
+@api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 @renderer_classes([JSONRenderer])
-@api_view(['PUT'])
 def user_add_product_to_cart(request):
     try:
         cart = Cart.objects.get(user=request.user)
@@ -73,9 +73,9 @@ def user_add_product_to_cart(request):
 
 
 @swagger_auto_schema(method='delete', request_body=CartSerializer)
+@api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 @renderer_classes([JSONRenderer])
-@api_view(['DELETE'])
 def user_remove_product_from_cart(request):
     try:
         cart = Cart.objects.get(user=request.user)
@@ -95,9 +95,9 @@ def user_remove_product_from_cart(request):
 
 
 @swagger_auto_schema(method='get')
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @renderer_classes([JSONRenderer])
-@api_view(['GET'])
 def user_get_cart(request):
     try:
         cart = Cart.objects.get(user=request.user)
@@ -114,9 +114,9 @@ def user_get_cart(request):
 
 
 @swagger_auto_schema(method='post', request_body=SaleSerializer)
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @renderer_classes([JSONRenderer])
-@api_view(['POST'])
 def user_sale(request):
     try:
         cart = Cart.objects.get(user=request.user)
